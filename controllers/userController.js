@@ -1,9 +1,6 @@
 const users = require('../models/userModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const validator=require('validator')
-
-
 
 exports.UserRegistration = async (req, res) => {
     try {
@@ -14,15 +11,15 @@ exports.UserRegistration = async (req, res) => {
             return res.json({ success: false, message: "User already registered" });
         }
 
-        if (!email || !validator.isEmail(email)) {
-            return res.status(400).json({ success: false, message: "Invalid email address" });
+        const regex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        if(!email || !regex.test(email.trim())){
+            return res.json({success:false,message:"invalid email"})
         }
 
-        const passwordRegex = /^[A-Za-z,1-9]{8,}$/;
+
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
         if (!password || !passwordRegex.test(password)) {
-            return res.status(400).json({
-                success: false,
-                message: "Password must be at least 8 characters long and include 1 uppercase, 1 lowercase, 1 number"
+            return res.json({success: false,message: "Password must be at least 8 characters and include numbers and letters"
             });
         }
 
@@ -48,13 +45,13 @@ exports.UserRegistration = async (req, res) => {
     }
 };
 
-
 exports.UserLogin = async (req, res) => {
     try {
         const { email, password } = req.body;
 
         const user = await users.findOne({ email });
-        if (!user) {
+        
+        if (!user ) {
             return res.json({ success: false, message: "Invalid email" });
         }
 
@@ -63,19 +60,18 @@ exports.UserLogin = async (req, res) => {
             return res.json({ success: false, message: "Invalid password" });
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        return res.json({ success: true, token, user: { id: user._id, username: user.username, email: user.email,date:user.registrationDate } });
+        return res.json({ success: true, token, user: { id: user._id, username: user.username, email: user.email, date: user.registrationDate } });
 
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message:"server side error"});
     }
 };
 
 exports.GetCurrentUserApi = async (req, res) => {
     try {
-        const token=req.header.token
-
+        return res.json({ success: true, user: req.user });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
